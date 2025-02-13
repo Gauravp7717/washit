@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { Waves, Search, ShoppingCart, User, Heart } from "lucide-react";
+import { Waves, Search, ShoppingCart, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const [activeNav, setActiveNav] = useState("home");
 
   const mainNavLinks = [
-    { id: "#home", label: "Home" },
+    { id: "", label: "Home" },
     { id: "service", label: "Service" },
-    { id: "#pricing", label: "Pricing" },
-    { id: "#locations", label: "Locations" },
-    { id: "#about", label: "About Us" },
-    { id: "#contact", label: "Contact" },
-    { id: "#faq", label: "FAQ" },
+    { id: "pricing", label: "Pricing" },
+    { id: "location", label: "Locations" },
+    { id: "about", label: "About Us" },
+    { id: "faq", label: "FAQ" },
   ];
 
   return (
@@ -48,9 +47,7 @@ const Navbar = () => {
               <button className="text-gray-600 hover:text-blue-600">
                 <Search className="w-6 h-6" />
               </button>
-              <button className="text-gray-600 hover:text-blue-600">
-                <Heart className="w-6 h-6" />
-              </button>
+
               <button className="text-gray-600 hover:text-blue-600 relative">
                 <ShoppingCart className="w-6 h-6" />
                 <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">

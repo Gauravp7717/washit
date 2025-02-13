@@ -24,14 +24,16 @@ const Hero = () => {
       icon: <Timer className="w-8 h-8" />,
       description: "Same-day delivery service",
       price: "From $4.99/lb",
-      image: "/api/placeholder/400/300",
+      image:
+        "https://images.pexels.com/photos/3951363/pexels-photo-3951363.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
     },
     {
       title: "Business Services",
       icon: <Truck className="w-8 h-8" />,
       description: "Corporate & bulk laundry solutions",
       price: "Custom Quote",
-      image: "/api/placeholder/400/300",
+      image:
+        "https://images.pexels.com/photos/2199293/pexels-photo-2199293.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
     },
   ];
 

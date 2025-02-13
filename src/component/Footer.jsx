@@ -69,7 +69,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
               <Waves className="h-8 w-8 text-blue-500" />
-              <span className="text-xl font-bold ml-2">FreshPress</span>
+              <span className="text-xl font-bold ml-2">Washit</span>
             </div>
             <div className="flex space-x-6">
               <Facebook className="w-6 h-6 text-gray-400 hover:text-white cursor-pointer" />
