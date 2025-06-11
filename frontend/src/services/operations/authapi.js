@@ -92,7 +92,7 @@ export function login(email, password, navigate) {
         localStorage.setItem("userId", response.data.user._id);
       }
 
-      navigate("/profile");
+      navigate("/");
     } catch (error) {
       console.log("LOGIN API ERROR.......", error)
       toast.error(error.response?.data?.message)

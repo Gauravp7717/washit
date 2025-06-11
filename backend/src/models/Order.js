@@ -1,3 +1,4 @@
+// models/Order.js
 const mongoose = require('mongoose');
 
 const orderSchema = mongoose.Schema({
@@ -37,7 +38,7 @@ const orderSchema = mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Picked Up', 'In Progress', 'Out for Delivery', 'Delivered'],
+        enum: ['Pending', 'Picked Up', 'In Progress', 'Out for Delivery', 'Delivered', 'Cancelled'],
         default: 'Pending',
     },
     pickupDate: {
@@ -54,9 +55,10 @@ const orderSchema = mongoose.Schema({
         default: 'Pending',
     },
     paymentDetails: {
-        orderId: { type: String }, // Razorpay order ID
-        paymentId: { type: String }, // Razorpay payment ID
-        signature: { type: String }, // Razorpay signature for verification
+        // Add Razorpay specific fields
+        orderId: { type: String },    // Razorpay Order ID (rzp_order_...)
+        paymentId: { type: String },  // Razorpay Payment ID (pay_...)
+        signature: { type: String },  // Razorpay Signature (for verification)
     },
     address: {
         street: { type: String, required: true },

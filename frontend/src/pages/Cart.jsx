@@ -1,15 +1,16 @@
+// Cart.js
 import React, { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2, ShoppingCart, Calendar } from "lucide-react";
-import { loadRazorpayScript, initiatePayment } from "../utils/razorpay"; // New utility file
+import { loadRazorpayScript, initiatePayment } from "../utils/razorpay"; // Import from new utility file
 import axios from "axios";
+import { toast } from "react-hot-toast"; // Assuming you use react-hot-toast for alerts
 
 const Cart = () => {
   const { cartItems, cartTotal, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   const navigate = useNavigate();
 
-  // State for address details (you might fetch this from a user profile API)
   const [address, setAddress] = useState({
     street: "",
     city: "",
@@ -26,38 +27,45 @@ const Cart = () => {
   const [token, setToken] = useState(null); // State to store the authentication token
 
   // Fetch user details and token on component mount
-  useEffect(() => {
+// Cart.js useEffect block
+useEffect(() => {
     const fetchUserAndToken = async () => {
-      const storedToken = localStorage.getItem('token'); // Get token from local storage
-      console.log("token", token);
-      const userId = localStorage.getItem('userId'); // Get user ID from local storage
+        const storedToken = localStorage.getItem('token');
+        const storedUserId = localStorage.getItem('userId');
 
-      if (storedToken && userId) {
-        setToken(storedToken);
-        try {
-          // Add Authorization header to fetch user data
-          const response = await axios.get(`http://localhost:5000/api/users/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${storedToken}`,
-            },
-          });
-          setUser(response.data);
-          // Pre-fill address if user has a default address
-          if (response.data.address) {
-            setAddress(response.data.address);
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          // Handle error (e.g., redirect to login if unauthorized or token expired)
-          // navigate('/signin'); // Example: redirect to signin
+        console.log("Cart.js useEffect - STARTING CHECK");
+        console.log("Cart.js useEffect - storedToken:", storedToken); // Check this value
+        console.log("Cart.js useEffect - storedUserId:", storedUserId); // Check this value
+
+        if (storedToken && storedUserId) {
+            setToken(storedToken);
+            try {
+                // If this axios.get fails, the catch block triggers navigation
+                const response = await axios.get(`http://localhost:5000/api/users/${storedUserId}`, {
+                    headers: {
+                        Authorization: `Bearer ${storedToken}`,
+                    },
+                });
+                setUser(response.data);
+                console.log("Cart.js useEffect - Fetched User Data SUCCESSFULLY:", response.data);
+
+                if (response.data.address) {
+                    setAddress(response.data.address);
+                }
+            } catch (error) {
+                console.error("Cart.js useEffect - ERROR fetching user data:", error);
+                // Check the error.response.status and error.response.data for more info
+                toast.error("Failed to fetch user data. Please log in again.");
+                navigate('/login'); // THIS IS THE REDIRECT TRIGGER
+            }
+        } else {
+            console.log("Cart.js useEffect - Token or UserId missing in localStorage, REDIRECTING to login.");
+            toast.error("Please log in to proceed with checkout.");
+            navigate('/login'); // THIS IS THE REDIRECT TRIGGER
         }
-      } else {
-        // If no user ID or token, prompt for login or show address form
-        // navigate('/signin'); // Example: redirect to signin
-      }
     };
     fetchUserAndToken();
-  }, []);
+}, [navigate]); // navigate is a dependency, so it's good to have it here.
 
   const handleQuantityChange = (serviceId, newQuantity) => {
     if (newQuantity > 0) {
@@ -88,11 +96,10 @@ const Cart = () => {
       return;
     }
 
-    if (!token) {
-      setCheckoutError("Please sign in to place an order.");
+    if (!token || !user) { // Ensure user object is also available
+      setCheckoutError("User not authenticated. Please log in.");
       setLoadingCheckout(false);
-      // Optionally redirect to login
-      navigate('/signin');
+      navigate('/login');
       return;
     }
 
@@ -103,13 +110,11 @@ const Cart = () => {
     }
 
     const orderData = {
-      // The user ID is now sent from the backend after authentication, so we don't need to explicitly send user._id here.
-      // The backend will get it from req.user._id set by the auth middleware.
       services: cartItems.map((item) => ({
-        serviceId: item.service._id, // Use the full service._id from the cart item
+        serviceId: item.service._id,
         quantity: item.quantity,
         priceAtOrder: item.priceAtOrder,
-        type: item.service.serviceType, // Pass serviceType as 'type'
+        type: item.service.serviceType,
       })),
       totalAmount: cartTotal,
       pickupDate: new Date(pickupDate).toISOString(),
@@ -119,84 +124,90 @@ const Cart = () => {
     };
 
     try {
-      // 1. Create Order on your backend
+      // 1. Create Order on your backend (this also creates Razorpay order)
       const orderResponse = await axios.post("http://localhost:5000/api/orders/place", orderData, {
         headers: {
-          Authorization: `Bearer ${token}`, // Include the authentication token
+          Authorization: `Bearer ${token}`,
         },
       });
-      const orderDetails = orderResponse.data.order; // Access the 'order' object from the response
+      const { orderId: mongoOrderId, razorpayOrderId, amount, currency } = orderResponse.data;
 
-      // 2. Initiate Razorpay payment (if using)
-      // This part remains largely the same as you had it, assuming your Razorpay backend integration handles order creation on Razorpay's side.
-      // Make sure your backend's placeOrder endpoint also creates the Razorpay order and returns `razorpayOrderId`.
+      // 2. Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript("https://checkout.razorpay.com/v1/checkout.js");
+      if (!scriptLoaded) {
+        setCheckoutError("Razorpay SDK failed to load. Are you offline?");
+        setLoadingCheckout(false);
+        return;
+      }
 
-      // A simple placeholder if you don't have Razorpay integrated fully yet
-      alert("Order placed successfully! Proceeding to payment (Razorpay simulation).");
-      clearCart();
-      navigate(`/order-confirmation/${orderDetails._id}`); // Redirect to order confirmation with the actual order ID
-
-      /*
-      // If you have Razorpay fully set up to create the order on your backend and return the razorpayOrderId:
-      await loadRazorpayScript("https://checkout.razorpay.com/v1/checkout.js");
-
-      const paymentResult = await initiatePayment({
-        amount: orderDetails.totalAmount * 100, // Razorpay expects amount in paisa
-        currency: "INR", // Or your currency
-        order_id: orderDetails.razorpayOrderId, // Order ID from your backend (should be included in orderDetails)
-        name: "Washit",
-        description: "Laundry Service Payment",
-        image: "https://example.com/your_logo.png", // Your logo
+      // 3. Initiate Razorpay payment
+      const options = {
+        key: "rzp_test_ITMzCtVZrwtZnk", // Replace with your test Key ID (same as in .env)
+        amount: amount, // Amount in paisa
+        currency: currency,
+        name: "Washit Laundry Services",
+        description: "Payment for Laundry Order",
+        order_id: razorpayOrderId, // Order ID obtained from your backend
         handler: async (response) => {
-          // This function is called on successful payment
+          // This function is called on successful payment (frontend callback)
           try {
-            await axios.post("http://localhost:5000/api/payments/verify", {
-              // Your backend endpoint for payment verification
+            toast.loading("Verifying payment...");
+            const verificationResponse = await axios.post("http://localhost:5000/api/payments/verify", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              orderId: orderDetails._id, // Your internal order ID
+              orderId: mongoOrderId, // Your internal MongoDB Order ID
             }, {
               headers: {
                 Authorization: `Bearer ${token}`,
               },
             });
-            alert("Payment Successful! Your order has been placed.");
-            clearCart();
-            navigate(`/order-confirmation/${orderDetails._id}`); // Redirect to order confirmation
+
+            if (verificationResponse.data.success) {
+              toast.dismiss(); // Dismiss loading toast
+              toast.success("Payment Successful! Your order has been placed.");
+              clearCart();
+              navigate(`/order-confirmation/${mongoOrderId}`); // Redirect to order confirmation
+            } else {
+              toast.dismiss();
+              toast.error("Payment verification failed. Please contact support.");
+              // Optionally navigate to an error page or show more details
+            }
           } catch (verifyError) {
-            console.error("Payment verification failed:", verifyError);
-            setCheckoutError("Payment verification failed. Please contact support.");
-            // You might want to update the order status to 'Failed' on your backend here
+            toast.dismiss();
+            console.error("Payment verification API call failed:", verifyError);
+            setCheckoutError(verifyError.response?.data?.message || "Payment verification failed. Please contact support.");
           }
         },
         prefill: {
-          name: user.name, // Pre-fill user name
-          email: user.email, // Pre-fill user email
-          contact: user.phone, // Pre-fill user phone
+          name: user.username || user.firstName + " " + user.lastName, // Use username or first/last name
+          email: user.email,
+          contact: user.phone || "9999999999", // Provide a default or get from user profile
         },
         notes: {
-          address: `${address.street}, ${address.city}`,
+          address: `${address.street}, ${address.city}, ${address.state} - ${address.zipCode}`,
+          orderId: mongoOrderId,
         },
         theme: {
-          color: "#3399CC",
+          color: "#3399CC", // Your brand color
         },
-      });
-      */
+      };
+
+      const rzpInstance = new window.Razorpay(options);
+      rzpInstance.open(); // Open the Razorpay modal
 
     } catch (err) {
       console.error("Checkout error:", err);
-      // More robust error handling:
+      let errorMessage = "Failed to process checkout. Please try again.";
       if (err.response && err.response.data && err.response.data.message) {
-        setCheckoutError(err.response.data.message);
-      } else {
-        setCheckoutError("Failed to process checkout. Please try again.");
+        errorMessage = err.response.data.message;
       }
+      setCheckoutError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoadingCheckout(false);
     }
   };
-
 
   return (
     <div className="container mx-auto p-8 min-h-screen bg-gray-100">
@@ -273,7 +284,6 @@ const Cart = () => {
               <span className="text-gray-700">Subtotal</span>
               <span className="font-semibold text-lg">₹{cartTotal.toFixed(2)}</span>
             </div>
-            {/* Add more summary lines like delivery fee, tax if applicable */}
             <div className="flex justify-between items-center font-bold text-xl mb-6">
               <span>Total</span>
               <span>₹{cartTotal.toFixed(2)}</span>

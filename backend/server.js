@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./src/config/db'); // Database connection utility
 
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -27,7 +28,9 @@ app.get('/', (req, res) => {
 const authRoutes = require('./src/routes/authRoutes');
 const serviceRoutes = require('./src/routes/serviceRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
+const paymentRoutes = require('./src/routes/paymentRoutes'); // Import your new payment routes
 // const paymentRoutes = require('./src/routes/paymentRoutes');
+const userRoutes = require('./src/routes/userRoutes');
 
 // Mount routes
 // All authentication-related routes will be prefixed with /api/auth
@@ -38,7 +41,8 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/orders', orderRoutes);
 // All payment-related routes will be prefixed with /api/payment
 // app.use('/api/payment', paymentRoutes);
-
+app.use('/api/payments', paymentRoutes); // Mount your new payment routes
+app.use('/api/users', userRoutes); 
 
 // Global Error Handling Middleware
 // This middleware catches any errors thrown in your routes or other middleware
